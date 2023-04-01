@@ -1,8 +1,4 @@
-import hashlib
-import os
-import pickle
 import time
-from functools import wraps
 
 import dgl
 import numpy as np
@@ -10,91 +6,14 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from dgllife.model.model_zoo import AttentiveFPPredictor
-from dgllife.utils import AttentiveFPAtomFeaturizer
-from dgllife.utils import AttentiveFPBondFeaturizer
-from dgllife.utils import CanonicalAtomFeaturizer
-from dgllife.utils import CanonicalBondFeaturizer
 from dgllife.utils import mol_to_bigraph
 from rdkit import Chem
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.preprocessing import RobustScaler
 from torch.utils.data import DataLoader
 
 from utils.data import load_alvadesc_data, load_mols_df
-
-import matplotlib.pyplot as plt
-
-def memorize(fun):
-    """ Memoization decorator, intended to cache the results for the graph building function to disk. np.arrays
-    or pandas dataframes are hex-hashed. The other arguments are expected to be convertable to strings
-    """
-    CACHE_PATH = '.cache'
-    #CACHE_PATH = r'C:\Users\gabri\AppData\Local\Packages\microsoft.windowscommunicationsapps_8wekyb3d8bbwe\LocalState\Files\S0\2\Attachments\gab[5684]\gab\.cache'
-    if not os.path.exists(CACHE_PATH):
-        os.makedirs(CACHE_PATH)
-
-    def hash_argument(arg):
-        if hasattr(arg, '__name__'):
-            return arg.__name__
-        if isinstance(arg, pd.DataFrame):
-            # Python's hash function is randomized for security reasons. Hence, use hashlib.
-            # Use only first 10 characters to avoid "name too long errors"
-            return hashlib.sha1(arg.values).hexdigest()[:10]
-        if isinstance(arg, np.ndarray):
-            try:
-                return hashlib.sha1(arg).hexdigest()[:10]
-            except ValueError:
-                # In case the numpy array is not C-ordered, fix this
-                return hashlib.sha1(arg.copy(order='C')).hexdigest()[:10]
-        return str(arg)[:10]
-
-    @wraps(fun)
-    def new_fun(*args, **kwargs):
-        string_args = ''
-        if len(args) > 0:
-            string_args += '_' + '_'.join([hash_argument(arg) for arg in args])
-        if len(kwargs) > 0:
-            string_args += '_' + '_'.join([(str(k)[:10] + hash_argument(v)) for k, v in kwargs.items()])
-
-        filename = os.path.join(CACHE_PATH, '.cache_{}{}.pickle'.format(fun.__name__, string_args))
-
-        if os.path.exists(filename):
-            with open(filename, 'rb') as file:
-                result = pickle.load(file)
-        else:
-            result = fun(*args, **kwargs)
-            with open(filename, 'wb') as file:
-                pickle.dump(result, file)
-        return result
-    return new_fun
-
-
-def get_atom_featurizer(atom_featurizer):
-    if atom_featurizer == 'canonical':
-       return CanonicalAtomFeaturizer()
-    elif atom_featurizer == 'attentive_featurizer':
-        return AttentiveFPAtomFeaturizer()
-    else:
-        raise ValueError('Invalid atom featurizer')
-
-
-def get_bond_featurizer(bond_featurizer, self_loop):
-    if bond_featurizer == 'canonical':
-       return CanonicalBondFeaturizer(self_loop=self_loop)
-    elif bond_featurizer == 'attentive_featurizer':
-        return AttentiveFPBondFeaturizer(self_loop=self_loop)
-    else:
-        raise ValueError('Invalid bond featurizer')
-
-
-def get_transformer(transformer):
-    if transformer == 'none':
-        return FunctionTransformer()
-    elif transformer == 'robust':
-        return RobustScaler()
-    else:
-        raise ValueError('Invalid transformer')
+from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
+from utils.memoization import memorize
 
 
 #@memorize
@@ -124,7 +43,6 @@ def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transforme
     train = [featurize(x_i, y_i) for x_i, y_i in zip(X_train, y_train)]
     test = [featurize(x_i, y_i) for x_i, y_i in zip(X_test, y_test)]
     return train, test, transformer
-
 
 
 def collate_molgraphs(data):
@@ -189,7 +107,7 @@ if __name__ == '__main__':
     bond_featurizer = 'canonical'
     #######################
 
-    #X, y = load_mols_df(n=100) #-> Solo coge 100 muestras para ir más rápido
+    #X, y = load_mols_df(n=200) #-> Solo coge 100 muestras para ir más rápido
     X, y = load_mols_df()
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED)
