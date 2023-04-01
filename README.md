@@ -14,7 +14,7 @@ Este proyecto consta de dos carpetas:
 
   2. **DatosObtenidos**: Contiene los datos almacenados de los distintos modelos que se han ido probando durante el desarrollo de este proyecto (.csv y gráfico).
 <br>
-Hay dos archivos que no se incluyen en este repositorio debido a su tamaño. Para poder utilizarlos hay que ubucarlos en la ruta correspondiente dentro del proyecto. Estos son:
+Hay dos archivos que no se incluyen en este repositorio debido a su tamaño. Para poder utilizarlos hay que ubicarlos en la ruta correspondiente dentro del proyecto. Estos son:
 
 - data/alvadesc/fingerprints/fingerprints.pkl
 - data/mols_df.pkl
