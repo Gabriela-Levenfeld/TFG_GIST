@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 from dgllife.model import GATv2
+from dgllife.model.model_zoo.gatv2_predictor import GATv2Predictor
 from dgllife.utils import mol_to_bigraph
 from rdkit import Chem
 from sklearn.model_selection import train_test_split
@@ -68,11 +69,8 @@ def to_cuda(bg, labels, masks):
 
 def train_step(reg, bg, labels, masks, loss_criterion, optimizer):
     optimizer.zero_grad()
-    print(bg)
-    print(bg.ndata['h'])
-    print(bg.ndata['h'].shape[1])
-    feats = (bg.ndata['h'], bg.ndata['h'].shape[1])
-    prediction = reg(bg, feats)
+    # TODO: Review if ndata['h'] is the right thing to pass
+    prediction = reg(bg, bg.ndata['h'])
     loss = (loss_criterion(prediction, labels, reduction='none') * (masks != 0).float()).mean()
     loss.backward()
     optimizer.step()
@@ -81,7 +79,7 @@ def train_step(reg, bg, labels, masks, loss_criterion, optimizer):
 
 def eval_step(reg, bg, labels, masks, loss_criterion, transformer):
     """ Compute loss_criterion and the absolute error after undoing the transformation from transformer """
-    prediction = reg(bg, bg.ndata['h'], bg.edata['e'])
+    prediction = reg(bg, bg.ndata['h'])
     loss = (loss_criterion(prediction, labels, reduction='none') * (masks != 0).float()).mean().item()
 
     prediction = prediction.cpu().numpy().reshape(-1, 1)
@@ -133,12 +131,13 @@ if __name__ == '__main__':
     # Get a sample of the graph to know the node_feat_size and the edge_feat_size
     graph, y, masks = next(iter(test_loader))
 
-    net = GATv2(in_feats=graph.ndata['h'].shape[1],
-                feat_drops=[0.2 for _ in range(2)],
-                allow_zero_in_degree=True)
+    # net = GATv2(in_feats=graph.ndata['h'].shape[1],
+    #             feat_drops=[0.2 for _ in range(2)],
+    #             allow_zero_in_degree=True)
 
-    reg = GATv2(in_feats=graph.ndata['h'].shape[1],
-                allow_zero_in_degree=True)
+    # Default values for agg_modes and hidden_feats do not work!
+    in_feats = graph.ndata['h'].shape[1]
+    reg = GATv2Predictor(in_feats=in_feats, agg_modes=["flatten", "mean"], hidden_feats=[32, 32], allow_zero_in_degree=True)
 
 
     if torch.cuda.is_available():
