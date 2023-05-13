@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from dgllife.model import GATv2
 from dgllife.model.model_zoo.gatv2_predictor import GATv2Predictor
 from dgllife.utils import mol_to_bigraph
 from rdkit import Chem
@@ -69,7 +68,7 @@ def to_cuda(bg, labels, masks):
 
 def train_step(reg, bg, labels, masks, loss_criterion, optimizer):
     optimizer.zero_grad()
-    # TODO: Review if ndata['h'] is the right thing to pass
+    # TODO: Review if ndata['h'] is the right thing to pass --> Verified: correct value
     prediction = reg(bg, bg.ndata['h'])
     loss = (loss_criterion(prediction, labels, reduction='none') * (masks != 0).float()).mean()
     loss.backward()
@@ -99,18 +98,18 @@ if __name__ == '__main__':
     total_epochs = 40
     self_loop = True
     graph_feat_size = 128 #No se usa
-    num_layers = 2 #No se usa
+    num_layers = 2 #Default number of layers used in the GATv2 model
     dropout = 0.2
     learning_rate = 1e-3
     SEED = 129767345
     #########################
     rt_scaler = 'robust'
-    atom_featurizer = 'attentive_featurizer'
-    bond_featurizer = 'attentive_featurizer'
+    atom_featurizer = 'attentive_featurizer' #'canonical'
+    bond_featurizer = 'attentive_featurizer' #'canonical'
     #######################
 
-    X, y = load_mols_df(n=100) #-> Solo coge 100 muestras para ir más rápido
-    #X, y = load_mols_df()
+    #X, y = load_mols_df(n=100) #Solo coge 100 muestras para ir más rápido
+    X, y = load_mols_df()
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED)
     #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED, stratify=y) #-> No se puede usar porque una de las 'clases' solo está formada por un componente
     print('Building graphs...', end='')
@@ -131,13 +130,12 @@ if __name__ == '__main__':
     # Get a sample of the graph to know the node_feat_size and the edge_feat_size
     graph, y, masks = next(iter(test_loader))
 
-    # net = GATv2(in_feats=graph.ndata['h'].shape[1],
-    #             feat_drops=[0.2 for _ in range(2)],
-    #             allow_zero_in_degree=True)
-
     # Default values for agg_modes and hidden_feats do not work!
-    in_feats = graph.ndata['h'].shape[1]
-    reg = GATv2Predictor(in_feats=in_feats, agg_modes=["flatten", "mean"], hidden_feats=[32, 32], allow_zero_in_degree=True)
+    # Comment: Tested feat_drops=[dropout for _ in range(num_layers)] and it yielded worse results than the default value.
+    reg = GATv2Predictor(in_feats=graph.ndata['h'].shape[1],
+                         agg_modes=["flatten", "mean"],
+                         hidden_feats=[32, 32],
+                         allow_zero_in_degree=True)
 
 
     if torch.cuda.is_available():
