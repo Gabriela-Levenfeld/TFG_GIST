@@ -1,12 +1,14 @@
+from collections import defaultdict
 import time
 
 import dgl
+from dgl import backend as B
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
 from dgllife.model.model_zoo import MGCNPredictor
-from dgllife.utils import mol_to_bigraph
+from dgllife.utils import mol_to_complete_graph, mol_to_bigraph
 from rdkit import Chem
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
@@ -15,6 +17,7 @@ from utils.data import load_alvadesc_data, load_mols_df
 from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
 from utils.memoization import memorize
 
+from alchemy import alchemy_nodes, alchemy_edges
 
 #@memorize
 def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transformer_alg, self_loop):
@@ -34,8 +37,8 @@ def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transforme
     def featurize(x, y):
         # each item is a duple of type (graph(x), y)
         return (
-            mol_to_bigraph(x, node_featurizer=atom_featurizer,
-                        edge_featurizer=bond_featurizer,
+            mol_to_complete_graph(x, node_featurizer=alchemy_nodes,
+                        edge_featurizer=alchemy_edges,
                         add_self_loop=self_loop),
             y
         )
@@ -67,18 +70,9 @@ def to_cuda(bg, labels, masks):
 
 def train_step(reg, bg, labels, masks, loss_criterion, optimizer):
     optimizer.zero_grad()
-
-    from scipy.spatial.distance import pdist, squareform
-    end_node_indices = bg.edges()[1]
-    end_node_feats = bg.ndata['h'][end_node_indices]
-    distances = pdist(end_node_feats, metric='euclidean')
-    edge_dists = torch.tensor(squareform(distances), dtype=torch.float32)
-
-    node_types = torch.arange(bg.number_of_nodes()).type(torch.LongTensor)
-    #node_types =torch.randint(0, 3000, (bg.num_nodes(),), dtype=torch.long)
-
-
-    prediction = reg(bg, node_types.type(torch.LongTensor), edge_dists)
+    node_types = bg.ndata['h']
+    distances = bg.edata['e']
+    prediction = reg(bg, node_types, distances)
     loss = (loss_criterion(prediction, labels, reduction='none') * (masks != 0).float()).mean()
     loss.backward()
     optimizer.step()
@@ -119,7 +113,7 @@ if __name__ == '__main__':
     batch_size = 256
     fp_size = 1024
     total_epochs = 40
-    self_loop = True
+    self_loop = False
     graph_feat_size = 128 #Parámetro que no se usa
     num_layers = 2 #Uso el parámetro por defecto, que es 3
     dropout = 0.2 #Parámetro que no se usa
