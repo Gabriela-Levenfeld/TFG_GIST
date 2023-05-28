@@ -94,21 +94,6 @@ def eval_step(reg, bg, labels, masks, loss_criterion, transformer):
     return loss, abs_errors
 
 
-import networkx as nx
-def prueba1_computes_edge_dists(graph):
-    # Convert graph to networkx graph
-    nx_graph = graph.to_networkx(node_attrs=['h'], edge_attrs=['e'])
-    edge_dists = np.zeros((graph.number_of_edges(),), dtype=np.int64)
-    # Compute shortest path distances using Dijkstra's algorithm
-    print(graph.edges(form='all'))
-    for idx, (src, dst, eid) in enumerate(zip(*graph.edges(form='all'))):
-        src, dst = src.item(), dst.item()
-        print(src)
-        print(dst)
-        edge_dists[idx] = nx.shortest_path_length(nx_graph, source=src, target=dst, weight='e', method='dijkstra')
-    return edge_dists
-
-
 if __name__ == '__main__':
     batch_size = 256
     fp_size = 1024
@@ -121,12 +106,12 @@ if __name__ == '__main__':
     SEED = 129767345
     #########################
     rt_scaler = 'robust'
-    atom_featurizer = 'canonical'
-    bond_featurizer = 'canonical'
+    atom_featurizer = 'canonical' #Este parámetro no se usa
+    bond_featurizer = 'canonical' #Este parámetro no se usa
     #######################
 
-    X, y = load_mols_df(n=100) #-> Solo coge 100 muestras para ir más rápido
-    #X, y = load_mols_df()
+    #X, y = load_mols_df(n=100) #-> Solo coge 100 muestras para ir más rápido
+    X, y = load_mols_df()
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED)
     #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED, stratify=y) #-> No se puede usar porque una de las 'clases' solo está formada por un componente
@@ -148,7 +133,7 @@ if __name__ == '__main__':
     # Get a sample of the graph to know the node_feat_size and the edge_feat_size
     graph, y, masks = next(iter(test_loader))
 
-    reg = MGCNPredictor(num_node_types=3000)
+    reg = MGCNPredictor()
 
     if torch.cuda.is_available():
         print('using CUDA!')
@@ -203,7 +188,7 @@ if __name__ == '__main__':
     })
     losses.index = losses.epoch
     # TODO: change name depending on arguments
-    losses.to_csv('losses.csv', index=False)
+    losses.to_csv('losses_MGCN.csv', index=False)
     print('Done')
 
     import matplotlib.pyplot as plt
