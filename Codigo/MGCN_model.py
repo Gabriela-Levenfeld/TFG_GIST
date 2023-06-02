@@ -14,10 +14,9 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 from utils.data import load_alvadesc_data, load_mols_df
-from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer, alchemy_nodes, alchemy_edges
+from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
 from utils.memoization import memorize
 
-#from alchemy import alchemy_nodes, alchemy_edges
 
 #@memorize
 def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transformer_alg, self_loop):
@@ -37,8 +36,8 @@ def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transforme
     def featurize(x, y):
         # each item is a duple of type (graph(x), y)
         return (
-            mol_to_complete_graph(x, node_featurizer=alchemy_nodes,
-                        edge_featurizer=alchemy_edges,
+            mol_to_complete_graph(x, node_featurizer=atom_featurizer,
+                        edge_featurizer=bond_featurizer,
                         add_self_loop=self_loop),
             y
         )
@@ -106,8 +105,8 @@ if __name__ == '__main__':
     SEED = 129767345
     #########################
     rt_scaler = 'robust'
-    atom_featurizer = 'canonical' #Este parámetro no se usa
-    bond_featurizer = 'canonical' #Este parámetro no se usa
+    atom_featurizer = 'alchemy'
+    bond_featurizer = 'alchemy'
     #######################
 
     #X, y = load_mols_df(n=100) #-> Solo coge 100 muestras para ir más rápido
