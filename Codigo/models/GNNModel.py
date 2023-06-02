@@ -51,7 +51,12 @@ class GATv2Model(GNNModel):
             in_feats=self.in_feats, agg_modes=self.agg_modes, hidden_feats=self.hidden_feats, allow_zero_in_degree=self.allow_zero_in_degree
         )
     def get_predictions(self, bg):
-        return self._model(bg, bg.ndata['h'])
+        feats = bg.ndata['h']
+        return self._model(bg, feats)
+    def train(self):
+        self._model.train()
+    def eval(self):
+        self._model.eval()
 
 class AttentiveFPModel(GNNModel):
     def __init__(self, *, node_feat_size, edge_feat_size, num_layers, graph_feat_size, dropout, **kwargs):
@@ -61,7 +66,13 @@ class AttentiveFPModel(GNNModel):
             node_feat_size=self.node_feat_size, edge_feat_size=self.edge_feat_size, num_layers=self.num_layers, graph_feat_size=self.graph_feat_size, dropout=self.dropout
         )
     def get_predictions(self, bg):
-        return self._model(bg, bg.ndata['h'], bg.edata['e'])
+        node_feats = bg.ndata['h']
+        edge_feats = bg.edata['e']
+        return self._model(bg, node_feats, edge_feats)
+    def train(self):
+        self._model.train()
+    def eval(self):
+        self._model.eval()
 
 class MGCNModel(GNNModel):
     def __init__(self, *, feats, n_layers, classifier_hidden_feats, num_node_types, num_edge_types, predictor_hidden_feats, **kwargs):
@@ -71,10 +82,13 @@ class MGCNModel(GNNModel):
             feats=self.feats, n_layers=self.n_layers, classifier_hidden_feats=self.classifier_hidden_feats, num_node_types=self.num_node_types, num_edge_types=self.num_edge_types, predictor_hidden_feats=self.predictor_hidden_feats
         )
     def get_predictions(self, bg):
-        #Featurizer se realiza con otro fichero (alchemy.py)
         node_types = bg.ndata['h']
         distances = bg.edata['e']
         return self._model(bg, node_types, distances)
+    def train(self):
+        self._model.train()
+    def eval(self):
+        self._model.eval()
 
 class GINModel(GNNModel):
     def __init__(self, *, num_node_emb_list, num_edge_emb_list, num_layers, emb_dim, dropout, readout, **kwargs):
@@ -87,3 +101,7 @@ class GINModel(GNNModel):
         categorical_node_feats = [bg.ndata.pop('atomic_number'), bg.ndata.pop('chirality_type')]
         categorical_edge_feats = [bg.edata.pop('bond_type'), bg.edata.pop('bond_direction_type')]
         return self._model(bg, categorical_node_feats, categorical_edge_feats)
+    def train(self):
+        self._model.train()
+    def eval(self):
+        self._model.eval()
