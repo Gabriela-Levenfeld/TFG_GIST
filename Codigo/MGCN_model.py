@@ -14,10 +14,10 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 from utils.data import load_alvadesc_data, load_mols_df
-from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
+from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer, alchemy_nodes, alchemy_edges
 from utils.memoization import memorize
 
-from alchemy import alchemy_nodes, alchemy_edges
+#from alchemy import alchemy_nodes, alchemy_edges
 
 #@memorize
 def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transformer_alg, self_loop):
