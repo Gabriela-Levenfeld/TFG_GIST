@@ -92,7 +92,12 @@ class GINPretrainBondFeaturizer(object):
                 Chem.rdchem.BondDir.NONE,
                 Chem.rdchem.BondDir.ENDUPRIGHT,
                 Chem.rdchem.BondDir.ENDDOWNRIGHT,
-                Chem.rdchem.BondDir.EITHERDOUBLE #Missing value
+                # Missing value
+                Chem.rdchem.BondDir.EITHERDOUBLE,
+                # Added all possible options
+                Chem.rdchem.BondDir.BEGINWEDGE,
+                Chem.rdchem.BondDir.BEGINDASH,
+                Chem.rdchem.BondDir.UNKNOWN
             ]
         self._bond_direction_types = bond_direction_types
         self._self_loop = self_loop
