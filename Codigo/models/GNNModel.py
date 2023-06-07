@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from dgllife.model.model_zoo.gatv2_predictor import GATv2Predictor
-from dgllife.model.model_zoo import AttentiveFPPredictor, MGCNPredictor, GINPredictor
+from dgllife.model.model_zoo import AttentiveFPPredictor, MPNNPredictor, GINPredictor
 
 
 # ABC is to define an abstract class
@@ -74,17 +74,17 @@ class AttentiveFPModel(GNNModel):
     def eval(self):
         self._model.eval()
 
-class MGCNModel(GNNModel):
-    def __init__(self, *, feats, n_layers, classifier_hidden_feats, num_node_types, num_edge_types, predictor_hidden_feats, **kwargs):
-        super().__init__(feats=feats, n_layers=n_layers, classifier_hidden_feats=classifier_hidden_feats, num_node_types=num_node_types, num_edge_types=num_edge_types, predictor_hidden_feats=predictor_hidden_feats, **kwargs)
+class MPNNModel(GNNModel):
+    def __init__(self, *, node_in_feats, edge_in_feats, node_out_feats, edge_hidden_feats, **kwargs):
+        super().__init__(node_in_feats=node_in_feats, edge_in_feats=edge_in_feats, node_out_feats=node_out_feats, edge_hidden_feats=edge_hidden_feats, **kwargs)
     def _init_model(self):
-        self._model = MGCNPredictor(
-            feats=self.feats, n_layers=self.n_layers, classifier_hidden_feats=self.classifier_hidden_feats, num_node_types=self.num_node_types, num_edge_types=self.num_edge_types, predictor_hidden_feats=self.predictor_hidden_feats
+        self._model = MPNNPredictor(
+            node_in_feats=self.node_in_feats, edge_in_feats=self.edge_in_feats, node_out_feats=self.node_out_feats, edge_hidden_feats=self.edge_hidden_feats
         )
     def get_predictions(self, bg):
-        node_types = bg.ndata['h']
-        distances = bg.edata['e']
-        return self._model(bg, node_types, distances)
+        node_feats = bg.ndata['h']
+        edge_feats = bg.edata['e']
+        return self._model(bg, node_feats, edge_feats)
     def train(self):
         self._model.train()
     def eval(self):
