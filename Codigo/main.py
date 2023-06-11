@@ -8,12 +8,12 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from dgllife.utils import mol_to_bigraph
 from rdkit import Chem
-from sklearn.model_selection import train_test_split
 
 
 from utils.data import load_alvadesc_data, load_mols_df
 from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
 from utils.memoization import memorize
+from utils.train.model_selection import stratified_train_validation_test_split
 from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
 
 
@@ -69,11 +69,9 @@ def to_cuda(bg, labels, masks):
 
 if __name__ == '__main__':
     batch_size = 256
-    fp_size = 1024
+    fp_size = 1024 #No se usa en ningún momento
     total_epochs = 40
     self_loop = True
-    graph_feat_size = 128
-    dropout = 0.2
     learning_rate = 1e-3
     SEED = 129767345
     #########################
@@ -83,9 +81,8 @@ if __name__ == '__main__':
     #######################
 
     X, y = load_mols_df(n=100)
+    X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1, validation_size=0.2, random_state=SEED)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED)
-    #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=SEED, stratify=y) #-> No se puede usar porque una de las 'clases' solo está formada por un componente
     print('Building graphs...', end='')
     start = time.time()
     train, test, transformer = build_graph_and_transform_target(
