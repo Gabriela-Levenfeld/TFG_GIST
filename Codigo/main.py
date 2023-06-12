@@ -1,6 +1,7 @@
 import time
 import dgl
 import numpy as np
+import optuna
 import pandas as pd
 
 import torch
@@ -14,6 +15,7 @@ from utils.data import load_alvadesc_data, load_mols_df
 from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
 from utils.memoization import memorize
 from utils.train.model_selection import stratified_train_validation_test_split
+from utils.train.param_search import param_search
 from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
 
 
@@ -84,8 +86,18 @@ if __name__ == '__main__':
     bond_featurizer = 'canonical' #attentive_featurizer, pretrain
     #######################
 
-    X, y = load_mols_df(n=100)
-    X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1, validation_size=0.2, random_state=SEED)
+    #X, y = load_mols_df(n=100)
+    #X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1, validation_size=0.2, random_state=SEED)
+
+    # Bayesian search
+    study = optuna.create_study(study_name=f'{model_name}',
+                                direction='minimize',
+                                storage='sqlite:///GNNPredict.db',
+                                load_if_exists=True)
+    attentiveFP_model = AttentiveFPModel()
+    n_trials = 10
+    attentiveFP_model = param_search(attentiveFP_model, train_loader, study, n_trials)
+
 
     print('Building graphs...', end='')
     start = time.time()
