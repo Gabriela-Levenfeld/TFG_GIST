@@ -18,8 +18,9 @@ from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
 
 
 #@memorize
-def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transformer_alg, self_loop):
+def build_graph_and_transform_target(train, validation, test, atom_alg, bond_alg, transformer_alg, self_loop):
     (X_train, y_train) = train
+    (X_val, y_val) = validation
     (X_test, y_test) = test
 
     atom_featurizer = get_atom_featurizer(atom_alg)
@@ -27,9 +28,11 @@ def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transforme
     transformer = get_transformer(transformer_alg)
 
     y_train = y_train.reshape(-1, 1)
+    y_val = y_val.reshape(-1, 1)
     y_test = y_test.reshape(-1, 1)
     if transformer is not None:
         y_train = transformer.fit_transform(y_train)
+        y_val = transformer.fit_transform(y_val)
         y_test = transformer.transform(y_test)
 
 
@@ -43,8 +46,9 @@ def build_graph_and_transform_target(train, test, atom_alg, bond_alg, transforme
             )
 
     train = [featurize(x_i, y_i) for x_i, y_i in zip(X_train, y_train)]
+    validation = [featurize(x_i, y_i) for x_i, y_i in zip(X_val, y_val)]
     test = [featurize(x_i, y_i) for x_i, y_i in zip(X_test, y_test)]
-    return train, test, transformer
+    return train, validation, test, transformer
 
 
 def collate_molgraphs(data):
@@ -85,8 +89,9 @@ if __name__ == '__main__':
 
     print('Building graphs...', end='')
     start = time.time()
-    train, test, transformer = build_graph_and_transform_target(
+    train, validation, test, transformer = build_graph_and_transform_target(
         (X_train, y_train),
+        (X_val, y_val),
         (X_test, y_test),
         atom_alg=atom_featurizer,
         bond_alg=bond_featurizer,
@@ -96,6 +101,7 @@ if __name__ == '__main__':
     print(f'Done! (Ellapsed: {time.time() - start})')
 
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, collate_fn=collate_molgraphs)
+    val_loader = DataLoader(validation, batch_size=batch_size, shuffle=False, collate_fn=collate_molgraphs)
     test_loader = DataLoader(test, batch_size=batch_size, shuffle=False, collate_fn=collate_molgraphs)
 
     # Get a sample of the graph to know the node_feat_size and the edge_feat_size
