@@ -58,6 +58,7 @@ if __name__ == '__main__':
 
     # Bayesian search
     for estimator in estimators:
+        name_model = estimator[0]
         best_params = param_search(estimator, (X_train, y_train), (X_val, y_val), study, n_trials)
         # best_params contiene parámetros para la construccion del grafo y parámetros para testear el modelo
         estimator.set_params(**best_params)
@@ -116,7 +117,7 @@ if __name__ == '__main__':
         })
         losses.index = losses.epoch
         # TODO: change name depending on arguments
-        losses.to_csv(f'{estimator[0]}.csv', index=False)
+        losses.to_csv(f'{name_model}.csv', index=False)
         print('Done')
 
         import matplotlib.pyplot as plt
