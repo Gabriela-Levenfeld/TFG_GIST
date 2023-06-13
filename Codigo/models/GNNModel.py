@@ -44,11 +44,22 @@ class GNNModel(ABC):
 
 
 class GATv2Model(GNNModel):
-    def __init__(self, *, in_feats, agg_modes, hidden_feats, allow_zero_in_degree, **kwargs):
+    def __init__(self, *, in_feats, hidden_feats, num_heads, feat_drops, attn_drops, alphas, residuals, allow_zero_in_degree, share_weights, agg_modes, predictor_out_feats, predictor_dropout, **kwargs):
         super().__init__(in_feats=in_feats, agg_modes=agg_modes, hidden_feats=hidden_feats, allow_zero_in_degree=allow_zero_in_degree, **kwargs)
     def _init_model(self):
         self._model = GATv2Predictor(
-            in_feats=self.in_feats, agg_modes=self.agg_modes, hidden_feats=self.hidden_feats, allow_zero_in_degree=self.allow_zero_in_degree
+            in_feats=self.in_feats,
+            hidden_feats=self.hidden_feats,
+            num_heads=self.num_heads,
+            feat_drops=self.feat_drops,
+            attn_drops=self.attn_drops,
+            alphas=self.alphas,
+            residuals=self.residuals,
+            allow_zero_in_degree=self.allow_zero_in_degree,
+            share_weights=self.share_weights,
+            agg_modes=self.agg_modes,
+            predictor_out_feats=self.predictor_out_feats,
+            predictor_dropout=self.predictor_dropout
         )
     def get_predictions(self, bg):
         feats = bg.ndata['h']
@@ -63,7 +74,11 @@ class AttentiveFPModel(GNNModel):
         super().__init__(node_feat_size=node_feat_size, edge_feat_size=edge_feat_size, num_layers=num_layers, graph_feat_size=graph_feat_size, dropout=dropout, **kwargs)
     def _init_model(self):
         self._model = AttentiveFPPredictor(
-            node_feat_size=self.node_feat_size, edge_feat_size=self.edge_feat_size, num_layers=self.num_layers, graph_feat_size=self.graph_feat_size, dropout=self.dropout
+            node_feat_size=self.node_feat_size,
+            edge_feat_size=self.edge_feat_size,
+            num_layers=self.num_layers,
+            graph_feat_size=self.graph_feat_size,
+            dropout=self.dropout
         )
     def get_predictions(self, bg):
         node_feats = bg.ndata['h']
@@ -79,7 +94,10 @@ class MPNNModel(GNNModel):
         super().__init__(node_in_feats=node_in_feats, edge_in_feats=edge_in_feats, node_out_feats=node_out_feats, edge_hidden_feats=edge_hidden_feats, **kwargs)
     def _init_model(self):
         self._model = MPNNPredictor(
-            node_in_feats=self.node_in_feats, edge_in_feats=self.edge_in_feats, node_out_feats=self.node_out_feats, edge_hidden_feats=self.edge_hidden_feats
+            node_in_feats=self.node_in_feats,
+            edge_in_feats=self.edge_in_feats,
+            node_out_feats=self.node_out_feats,
+            edge_hidden_feats=self.edge_hidden_feats
         )
     def get_predictions(self, bg):
         node_feats = bg.ndata['h']
@@ -95,7 +113,12 @@ class GINModel(GNNModel):
         super().__init__(num_node_emb_list=num_node_emb_list, num_edge_emb_list=num_edge_emb_list, num_layers=num_layers, emb_dim=emb_dim, dropout=dropout, readout=readout, **kwargs)
     def _init_model(self):
         self._model = GINPredictor(
-            num_node_emb_list=self.num_node_emb_list, num_edge_emb_list=self.num_edge_emb_list, num_layers=self.num_layers, emb_dim=self.emb_dim, dropout=self.dropout, readout=self.readout
+            num_node_emb_list=self.num_node_emb_list,
+            num_edge_emb_list=self.num_edge_emb_list,
+            num_layers=self.num_layers,
+            emb_dim=self.emb_dim,
+            dropout=self.dropout,
+            readout=self.readout
         )
     def get_predictions(self, bg):
         categorical_node_feats = [bg.ndata.pop('atomic_number'), bg.ndata.pop('chirality_type')]
