@@ -113,14 +113,15 @@ class MPNNModel(GNNModel):
         self._model.eval()
 
 class GINModel(GNNModel):
-    def __init__(self, *, num_node_emb_list, num_edge_emb_list, num_layers, emb_dim, dropout, readout, **kwargs):
-        super().__init__(num_node_emb_list=num_node_emb_list, num_edge_emb_list=num_edge_emb_list, num_layers=num_layers, emb_dim=emb_dim, dropout=dropout, readout=readout, **kwargs)
+    def __init__(self, *, num_node_emb_list, num_edge_emb_list, num_layers, emb_dim, JK, dropout, readout, **kwargs):
+        super().__init__(num_node_emb_list=num_node_emb_list, num_edge_emb_list=num_edge_emb_list, num_layers=num_layers, emb_dim=emb_dim, JK=JK, dropout=dropout, readout=readout, **kwargs)
     def _init_model(self):
         self._model = GINPredictor(
             num_node_emb_list=self.num_node_emb_list,
             num_edge_emb_list=self.num_edge_emb_list,
             num_layers=self.num_layers,
             emb_dim=self.emb_dim,
+            JK=self.JK,
             dropout=self.dropout,
             readout=self.readout
         )
