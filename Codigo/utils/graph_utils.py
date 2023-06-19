@@ -8,10 +8,9 @@ from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_tran
 
 
 #@memorize
-def build_graph_and_transform_target(train, validation, test, atom_alg, bond_alg, transformer_alg, self_loop):
+def build_graph_and_transform_target(train, validation, atom_alg, bond_alg, transformer_alg, self_loop):
     (X_train, y_train) = train
     (X_val, y_val) = validation
-    (X_test, y_test) = test
 
     atom_featurizer = get_atom_featurizer(atom_alg)
     bond_featurizer = get_bond_featurizer(bond_alg, self_loop)
@@ -19,12 +18,33 @@ def build_graph_and_transform_target(train, validation, test, atom_alg, bond_alg
 
     y_train = y_train.reshape(-1, 1)
     y_val = y_val.reshape(-1, 1)
-    y_test = y_test.reshape(-1, 1)
     if transformer is not None:
         y_train = transformer.fit_transform(y_train)
-        y_val = transformer.fit_transform(y_val)
-        y_test = transformer.transform(y_test)
+        y_val = transformer.transform(y_val)
 
+    def featurize(x, y):
+        # each item is a duple of type (graph(x), y)
+        return (
+            mol_to_bigraph(x, node_featurizer=atom_featurizer,
+                        edge_featurizer=bond_featurizer,
+                        add_self_loop=self_loop),
+            y
+        )
+
+    train = [featurize(x_i, y_i) for x_i, y_i in zip(X_train, y_train)]
+    validation = [featurize(x_i, y_i) for x_i, y_i in zip(X_val, y_val)]
+    return train, validation, transformer
+
+def build_test_graph_and_transform_target(test, atom_alg, bond_alg, transformer_alg, self_loop):
+    (X_test, y_test) = test
+
+    atom_featurizer = get_atom_featurizer(atom_alg)
+    bond_featurizer = get_bond_featurizer(bond_alg, self_loop)
+    transformer = get_transformer(transformer_alg)
+
+    y_test = y_test.reshape(-1, 1)
+    if transformer is not None:
+        y_test = transformer.transform(y_test)
 
     def featurize(x, y):
         # each item is a duple of type (graph(x), y)
@@ -33,12 +53,10 @@ def build_graph_and_transform_target(train, validation, test, atom_alg, bond_alg
                            edge_featurizer=bond_featurizer,
                            add_self_loop=self_loop),
             y
-            )
+        )
 
-    train = [featurize(x_i, y_i) for x_i, y_i in zip(X_train, y_train)]
-    validation = [featurize(x_i, y_i) for x_i, y_i in zip(X_val, y_val)]
     test = [featurize(x_i, y_i) for x_i, y_i in zip(X_test, y_test)]
-    return train, validation, test, transformer
+    return test, transformer
 
 
 def collate_molgraphs(data):
