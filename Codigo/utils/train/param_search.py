@@ -28,7 +28,7 @@ def suggest_params_gatv2(trial):
     alpha =trial.suggest_uniform('alphas', 0, 1)
     r = trial.suggest_categorical('residuals', [True, False])
     s_w = trial.suggest_categorical('share_weights', [True, False])
-    aggregate_modes = trial.suggest_categorical('agg_modes', ['flatten', 'mean', 'max', 'min', 'sum'])
+    aggregate_modes = trial.suggest_categorical('agg_modes', ['flatten', 'mean']) # This are the only 2 options that GATv2 knows how to manage
     params = {
         'hidden_feats': [hidden_f] * num_layers,
         'num_heads': [n_attention_heads] * num_layers,
