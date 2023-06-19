@@ -13,7 +13,7 @@ from utils.data import load_alvadesc_data, load_mols_df
 from utils.train.model_selection import stratified_train_validation_test_split
 from utils.train.param_search import param_search
 from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
-from utils.graph_utils import build_graph_and_transform_target, collate_molgraphs, to_cuda
+from utils.graph_utils import build_test_graph_and_transform_target, collate_molgraphs, to_cuda
 
 
 def create_estimators():
@@ -26,12 +26,7 @@ def create_estimators():
     return estimator
 
 def dummy_create_estimators():
-    estimator = [
-        ('gatv2', GATv2Model()),
-        ('attentiveFP', AttentiveFPModel()),
-        ('mpnn', MPNNModel()),
-        ('gin', GINModel())
-    ]
+    estimator = ['AttentiveFP']
     return estimator
 
 if __name__ == '__main__':
@@ -65,9 +60,7 @@ if __name__ == '__main__':
 
         print('Building graphs...', end='')
         start = time.time()
-        _, test, transformer = build_graph_and_transform_target(
-            (X_train, y_train),
-            (X_val, y_val),
+        test, transformer = build_test_graph_and_transform_target(
             (X_test, y_test),
             atom_alg=best_params['atom_featurizer'],
             bond_alg=best_params['bond_featurizer'],
