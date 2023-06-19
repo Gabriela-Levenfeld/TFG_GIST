@@ -17,12 +17,7 @@ from utils.graph_utils import build_test_graph_and_transform_target, collate_mol
 
 
 def create_estimators():
-    estimator = [
-        ('gatv2', GATv2Model()),
-        ('attentiveFP', AttentiveFPModel()),
-        ('mpnn', MPNNModel()),
-        ('gin', GINModel())
-    ]
+    estimator = ['GATv2', 'AttentiveFP', 'MPNN', 'GIN']
     return estimator
 
 def dummy_create_estimators():

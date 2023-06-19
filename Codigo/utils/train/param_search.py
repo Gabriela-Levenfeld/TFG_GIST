@@ -84,34 +84,35 @@ def generate_model(m, params, train_loader):
     if m == 'GATv2':
         reg = GATv2Model(in_feats=graph.ndata['h'].shape[1],
                          hidden_feats=params['hidden_feats'],
-                         num_heads=params.num_heads,
-                         feat_drops=params.feat_drops,
-                         attn_drops= params.attn_drops,
-                         alphas=params.alphas,
-                         residuals=params.residuals,
-                         allow_zero_in_degree=params.allow_zero_in_degree,
-                         share_weights=params.share_weights,
-                         agg_modes=params.agg_modes,
-                         predictor_out_feats=params.predictor_out_feats,
-                         predictor_dropout=params.predictor_dropout)
+                         num_heads=params['num_heads'],
+                         feat_drops=params['feat_drops'],
+                         attn_drops= params['attn_drops'],
+                         alphas=params['alphas'],
+                         residuals=params['residuals'],
+                         allow_zero_in_degree=params['allow_zero_in_degree'],
+                         share_weights=params['share_weights'],
+                         agg_modes=params['agg_modes'],
+                         predictor_out_feats=params['predictor_out_feats'],
+                         predictor_dropout=params['predictor_dropout'])
     elif m == 'AttentiveFP':
         reg = AttentiveFPModel(node_feat_size=graph.ndata['h'].shape[1],
                                edge_feat_size=graph.edata['e'].shape[1],
-                               num_layers=params.num_layers,
-                               graph_feat_size=params.graph_feat_size,
-                               dropout=params.dropout)
+                               num_layers=params['num_layers'],
+                               graph_feat_size=params['graph_feat_size'],
+                               dropout=params['dropout'])
     elif m == 'MPNN':
         reg = MPNNModel(node_in_feats=graph.ndata['h'].shape[1],
                         edge_in_feats=graph.edata['e'].shape[1],
-                        node_out_feats=params.node_out_feats,
-                        edge_hidden_feats=params.edge_hidden_feats)
+                        node_out_feats=params['node_out_feats'],
+                        edge_hidden_feats=params['edge_hidden_feats'])
     elif m == 'GIN':
-        reg = GINModel(num_node_emb_list=params.num_node_emb_list,
-                       num_edge_emb_list=params.num_edge_emb_list,
-                       num_layers=params.num_layers,
-                       emb_dim=params.emb_dim,
-                       dropout=params.dropout,
-                       readout=params.readout)
+        reg = GINModel(num_node_emb_list=params['num_node_emb_list'],
+                       num_edge_emb_list=params['num_edge_emb_list'],
+                       num_layers=params['num_layers'],
+                       emb_dim=params['emb_dim'],
+                       JK=params['JK'],
+                       dropout=params['dropout'],
+                       readout=params['readout'])
 
     if torch.cuda.is_available():
         print('using CUDA!')
@@ -146,11 +147,11 @@ def bo_validation(reg, val_loader, loss_criterion, transformer):
 def create_objective(estimator, train_dataset, validation_dataset, scoring):
     def objective(trial):
         params = dict()
-        m = trial.suggest_categorical('model', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
+        model_name = trial.suggest_categorical('model', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
 
         # Generate the graphs
         rt_scaler = 'robust'
-        if m == 'GIN':
+        if model_name == 'GIN':
             atom_featurizer = 'pretrain'
             bond_featurizer = 'pretrain'
         else:
@@ -173,44 +174,42 @@ def create_objective(estimator, train_dataset, validation_dataset, scoring):
             'self_loop': self_loop
         })
 
+        # Generate the specific hyperparameters
+        if model_name == 'GATv2':
+            params.update(suggest_params_gatv2(trial))
+        elif model_name == 'AttentiveFP':
+            params.update(suggest_params_attentiveFP(trial))
+        elif model_name == 'MPNN':
+            params.update(suggest_params_mpnn(trial))
+        elif model_name == 'GIN':
+            params.update(suggest_params_gin(trial))
+
+        # Load the dataset -> BATCH_SIZE debe ser búscado con Optuna
+        train_loader = DataLoader(train, batch_size=256, shuffle=True, collate_fn=collate_molgraphs)
+        val_loader = DataLoader(validation, batch_size=256, shuffle=False, collate_fn=collate_molgraphs)
+
+        # Generate the model
+        reg = generate_model(model_name, params, train_loader)
+
         # Generate the common hyperparameters
         optimizer_name = trial.suggest_categorical('optimizer', ['Adam', 'AdamW', 'RMSprop', 'SGD'])
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-3)
         common_hyperparameters = {
             'batch_size': trial.suggest_int('batch_size', 32, 512),
-            'total_epoch': trial.suggest_int('total_epoch', 40, 100),
+            'total_epochs': trial.suggest_int('total_epochs', 40, 100),
             # By now, total_epoch=40 and sometimes it is not enough
             'learning_rate': learning_rate,
-            'optimizer': getattr(torch.optim, optimizer_name)(estimator.parameters(), lr=learning_rate)
+            'optimizer': getattr(torch.optim, optimizer_name)(reg._model.parameters(), lr=learning_rate)
         }
         params.update(common_hyperparameters)
-        estimator.set_params(**params)
-
-        # Load the dataset
-        train_loader = DataLoader(train, batch_size=estimator.batch_size, shuffle=True,
-                                  collate_fn=collate_molgraphs)
-        val_loader = DataLoader(validation, batch_size=estimator.batch_size, shuffle=False,
-                                collate_fn=collate_molgraphs)
-
-        # Generate the specific hyperparameters
-        if m == 'GATv2':
-            params.update(suggest_params_gatv2(trial))
-        elif m == 'AttentiveFP':
-            params.update(suggest_params_attentiveFP(trial))
-        elif m == 'MPNN':
-            params.update(suggest_params_mpnn(trial))
-        elif m == 'GIN':
-            params.update(suggest_params_gin(trial))
-
-        # Generate the model
-        reg = generate_model(m, params, train_loader)
+        #reg.set_params(**params)
 
         # Training of the model
         train_losses = []
         val_losses = []
         loss_criterion = F.smooth_l1_loss
-        for epoch in range(1, estimator.total_epochs + 1):
-            train_loss = bo_train(reg, train_loader, estimator.optimizer, loss_criterion)
+        for epoch in range(1, params['total_epochs'] + 1):
+            train_loss = bo_train(reg, train_loader, params['optimizer'], loss_criterion)
             val_loss, abs_errors = bo_validation(reg, val_loader, loss_criterion, transformer)
 
             train_losses.append(train_loss)
