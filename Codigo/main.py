@@ -6,14 +6,6 @@ from utils.train.model_selection import stratified_train_validation_test_split
 from utils.train.param_search import param_search
 
 
-def create_estimators():
-    estimator = ['GATv2', 'AttentiveFP', 'MPNN', 'GIN']
-    return estimator
-
-def dummy_create_estimators():
-    estimator = ['AttentiveFP']
-    return estimator
-
 if __name__ == '__main__':
     SEED = 129767345
     #########################
