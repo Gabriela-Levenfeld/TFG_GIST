@@ -1,21 +1,14 @@
-import numpy as np
 import torch
+
+import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-
 from optuna.trial import TrialState
-from sklearn.base import clone
-from functools import singledispatch
 
 from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
-from utils.train.loss import truncated_rmse_scorer
 from utils.graph_utils import build_graph_and_transform_target, collate_molgraphs,to_cuda
 
-"""""
-Parameters haven't used yet
-'weight_decay': trial.suggest_uniform('weight_decay', 0, 3e-3),
-'patience': trial.suggest_int('patience', 5, 20),
-"""""
+
 
 def suggest_params_gatv2(trial):
     # Default values for agg_modes and hidden_feats do not work!
@@ -23,9 +16,9 @@ def suggest_params_gatv2(trial):
     num_layers = trial.suggest_int('num_layer', 3, 6)
     hidden_f = trial.suggest_int('hidden_feats', 32, 256)
     n_attention_heads = trial.suggest_int('num_heads', 4, 8)
-    dropout_input_feats = trial.suggest_uniform('feat_drops', 0, 0.5)
-    dropout_edge = trial.suggest_uniform('attn_drops', 0, 0.5)
-    alpha =trial.suggest_uniform('alphas', 0, 1)
+    dropout_input_feats = trial.suggest_float('feat_drops', 0, 0.5)
+    dropout_edge = trial.suggest_float('attn_drops', 0, 0.5)
+    alpha =trial.suggest_float('alphas', 0, 1)
     r = trial.suggest_categorical('residuals', [True, False])
     s_w = trial.suggest_categorical('share_weights', [True, False])
     aggregate_modes = trial.suggest_categorical('agg_modes', ['flatten', 'mean']) # This are the only 2 options that GATv2 knows how to manage
@@ -40,7 +33,7 @@ def suggest_params_gatv2(trial):
         'share_weights': [s_w] * num_layers,
         'agg_modes': [aggregate_modes] * num_layers,
         'predictor_out_feats': trial.suggest_int('predictor_out_feats', 16, 512), #Deafult value to 128
-        'predictor_dropout': trial.suggest_uniform('predictor_dropout', 0, 0.5)
+        'predictor_dropout': trial.suggest_float('predictor_dropout', 0, 0.5)
     }
     return params
 
@@ -50,7 +43,7 @@ def suggest_params_attentiveFP(trial):
     params = {
         'num_layers': trial.suggest_int('num_layer', 2, 5),
         'graph_feat_size': trial.suggest_int('graph_feat_size', 50, 500),
-        'dropout': trial.suggest_uniform('dropout', 0.1, 0.6),
+        'dropout': trial.suggest_float('dropout', 0.1, 0.6),
     }
     return params
 
@@ -71,7 +64,7 @@ def suggest_params_gin(trial):
         'num_layers': num_layers,
         'emb_dim': trial.suggest_int('emb_dim', 64, 512),
         'JK': trial.suggest_categorical('JK', ['concat', 'last', 'max', 'sum']),
-        'dropout':trial.suggest_uniform('dropout', 0.1, 0.6),
+        'dropout':trial.suggest_float('dropout', 0.1, 0.6),
         'readout': trial.suggest_categorical('readout', ['sum', 'mean', 'max', 'attention', 'set2set'])
     }
     return params
@@ -113,6 +106,8 @@ def generate_model(m, params, train_loader):
                        JK=params['JK'],
                        dropout=params['dropout'],
                        readout=params['readout'])
+    else:
+        raise ValueError(f"Invalid model name {m}")
 
     if torch.cuda.is_available():
         print('using CUDA!')
@@ -121,7 +116,6 @@ def generate_model(m, params, train_loader):
 
 def bo_train(reg, train_loader, optimizer, loss_criterion):
     train_losses = []
-
     reg.train()
     epoch_losses = []
     for batch_id, (bg, labels, masks) in enumerate(train_loader):
@@ -134,17 +128,17 @@ def bo_train(reg, train_loader, optimizer, loss_criterion):
 def bo_validation(reg, val_loader, loss_criterion, transformer):
     reg.eval()
     with torch.no_grad():
-        epoch_losses = []
-        abs_errors = []
+        total_loss = 0.0
+        total_abs_error = 0.0
         for batch_id, (bg, labels, masks) in enumerate(val_loader):
             bg, labels, masks = to_cuda(bg, labels, masks)
             loss, absolute_errors = reg.eval_step(reg, bg, labels, masks, loss_criterion, transformer)
-            epoch_losses.append(loss)
-            abs_errors.append(absolute_errors)
-    return epoch_losses, abs_errors
+            total_loss += loss
+            total_abs_error += absolute_errors
+    return total_loss, total_abs_error
 
 
-def create_objective(estimator, train_dataset, validation_dataset, scoring):
+def create_objective(train_dataset, validation_dataset):
     def objective(trial):
         params = dict()
         model_name = trial.suggest_categorical('model', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
@@ -184,50 +178,44 @@ def create_objective(estimator, train_dataset, validation_dataset, scoring):
         elif model_name == 'GIN':
             params.update(suggest_params_gin(trial))
 
-        # Load the dataset -> BATCH_SIZE debe ser búscado con Optuna
-        train_loader = DataLoader(train, batch_size=256, shuffle=True, collate_fn=collate_molgraphs)
-        val_loader = DataLoader(validation, batch_size=256, shuffle=False, collate_fn=collate_molgraphs)
+        batch_size = trial.suggest_int('batch_size', 32, 512)
+        train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, collate_fn=collate_molgraphs)
+        val_loader = DataLoader(validation, batch_size=batch_size, shuffle=False, collate_fn=collate_molgraphs)
 
         # Generate the model
         reg = generate_model(model_name, params, train_loader)
 
         # Generate the common hyperparameters
-        optimizer_name = trial.suggest_categorical('optimizer', ['Adam', 'AdamW', 'RMSprop', 'SGD'])
-        learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-3)
+        optimizer_name = trial.suggest_categorical('optimizer', ['Adam', 'AdamW', 'SGD'])
+        learning_rate = trial.suggest_float('learning_rate', 1e-5, 1e-2, log=True)
         common_hyperparameters = {
-            'batch_size': trial.suggest_int('batch_size', 32, 512),
-            'total_epochs': trial.suggest_int('total_epochs', 40, 100),
+            'batch_size': batch_size,
+            'total_epochs': trial.suggest_int('total_epochs', 40, 250),
             # By now, total_epoch=40 and sometimes it is not enough
             'learning_rate': learning_rate,
             'optimizer': getattr(torch.optim, optimizer_name)(reg._model.parameters(), lr=learning_rate)
         }
         params.update(common_hyperparameters)
-        #reg.set_params(**params)
 
         # Training of the model
         train_losses = []
-        val_losses = []
         loss_criterion = F.smooth_l1_loss
         for epoch in range(1, params['total_epochs'] + 1):
             train_loss = bo_train(reg, train_loader, params['optimizer'], loss_criterion)
-            val_loss, abs_errors = bo_validation(reg, val_loader, loss_criterion, transformer)
-
             train_losses.append(train_loss)
-            val_losses.append(val_loss)
-
-        return val_losses
+        val_loss, abs_errors = bo_validation(reg, val_loader, loss_criterion, transformer)
+        return val_loss
     return objective
 
 
-def param_search(estimator, train, validation, study, n_trials, scoring=truncated_rmse_scorer):
-    objective = create_objective(estimator, train, validation, scoring)
+def param_search(train, validation, study, n_trials):
+    objective = create_objective(train, validation)
     trials = [trial for trial in study.get_trials() if trial.state == TrialState.COMPLETE]
     n_trials = max(0, n_trials-len(trials))
     if n_trials > 0:
         print(f"Starting {n_trials} trials")
-        study.optimize(objective, n_trials=n_trials)
+        study.optimize(objective, n_trials=n_trials, catch=(Exception, ))
     best_params = load_best_params(study)
-    #estimator.set_params(**best_params)
     return best_params
 
 
