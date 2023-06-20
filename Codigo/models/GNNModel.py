@@ -44,7 +44,7 @@ class GNNModel(ABC):
 
 
 class GATv2Model(GNNModel):
-    def __init__(self, *, in_feats=None, hidden_feats=None, num_heads=None, feat_drops=None, attn_drops=None, alphas=None, residuals=None, allow_zero_in_degree=None, share_weights=None, agg_modes=None, predictor_out_feats=None, predictor_dropout=None, **kwargs):
+    def __init__(self, *, in_feats, hidden_feats, num_heads, feat_drops, attn_drops, alphas, residuals, allow_zero_in_degree, share_weights, agg_modes, predictor_out_feats, predictor_dropout, **kwargs):
         if in_feats is not None:
             super().__init__(in_feats=in_feats, hidden_feats=hidden_feats, num_heads=num_heads, feat_drops=feat_drops, attn_drops=attn_drops, alphas=alphas, residuals=residuals, allow_zero_in_degree=allow_zero_in_degree, share_weights=share_weights, agg_modes=agg_modes, predictor_out_feats=predictor_out_feats, predictor_dropout=predictor_dropout, **kwargs)
         else:
