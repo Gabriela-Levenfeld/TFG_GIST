@@ -13,7 +13,7 @@ from utils.graph_utils import build_graph_and_transform_target, collate_molgraph
 def suggest_params_gatv2(trial):
     # Default values for agg_modes and hidden_feats do not work!
     # Setting up based on GAT -> https://github.com/awslabs/dgl-lifesci/blob/master/examples/property_prediction/csv_data_configuration/hyper.py
-    num_layers = trial.suggest_int('num_layer', 3, 6)
+    num_layers = trial.suggest_int('num_layers', 3, 6)
     hidden_f = trial.suggest_int('hidden_feats', 32, 256)
     n_attention_heads = trial.suggest_int('num_heads', 4, 8)
     dropout_input_feats = trial.suggest_float('feat_drops', 0, 0.5)
@@ -41,7 +41,7 @@ def suggest_params_attentiveFP(trial):
     # Values selected according to Supplementary Table 4 and 6
     # of "Pushing the boundaries of molecular representation for drug discovery with graph attention mechanism"
     params = {
-        'num_layers': trial.suggest_int('num_layer', 2, 5),
+        'num_layers': trial.suggest_int('num_layers', 2, 5),
         'graph_feat_size': trial.suggest_int('graph_feat_size', 50, 500),
         'dropout': trial.suggest_float('dropout', 0.1, 0.6),
     }
@@ -55,7 +55,7 @@ def suggest_params_mpnn(trial):
     return params
 
 def suggest_params_gin(trial):
-    num_layers = trial.suggest_int('num_layer', 3, 6)
+    num_layers = trial.suggest_int('num_layers', 3, 6)
     num_nodes = trial.suggest_int('num_node_emb_list', 3, 120)
     num_edges = trial.suggest_int('num_edge_emb_list', 3, 6)
     params = {
@@ -141,7 +141,9 @@ def bo_validation(reg, val_loader, loss_criterion, transformer):
 def create_objective(train_dataset, validation_dataset):
     def objective(trial):
         params = dict()
-        model_name = trial.suggest_categorical('model', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
+        # TODO: Arreglar GIN model
+        #model_name = trial.suggest_categorical('model_name', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
+        model_name = trial.suggest_categorical('model_name', ['GATv2', 'AttentiveFP', 'MPNN'])
 
         # Generate the graphs
         rt_scaler = 'robust'
@@ -162,6 +164,7 @@ def create_objective(train_dataset, validation_dataset):
             self_loop=self_loop
         )
         params.update({
+            'model_name': model_name,
             'rt_scaler': rt_scaler,
             'atom_featurizer': atom_featurizer,
             'bond_featurizer': bond_featurizer,
