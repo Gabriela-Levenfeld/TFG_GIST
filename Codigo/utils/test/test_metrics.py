@@ -93,7 +93,6 @@ def test_results(best_params, filename):
     reg = generate_model(best_params, test_loader)
 
     # Performace predictions on the Test set
-
     total_epochs = best_params['total_epochs']
     test_losses = []
     maes = []
@@ -126,7 +125,7 @@ def test_results(best_params, filename):
     })
     losses.index = losses.epoch
     model_name = best_params['model_name']
-    losses.to_csv(f'{model_name}.csv', index=False)
+    losses.to_csv(f'{model_name}_losses.csv', index=False)
     print('Done - Results saved')
 
     import matplotlib.pyplot as plt

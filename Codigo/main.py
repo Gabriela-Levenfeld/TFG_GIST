@@ -18,7 +18,7 @@ if __name__ == '__main__':
         X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1,
                                                                                                 validation_size=0.2,
                                                                                                 random_state=SEED)
-        n_trials = 2
+        n_trials = 1
         storage = 'sqlite:///basura.db'
     else:
         print("Searching configuration")
