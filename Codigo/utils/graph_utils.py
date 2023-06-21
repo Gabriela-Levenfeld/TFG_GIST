@@ -7,7 +7,7 @@ from utils.memoization import memorize
 from utils.featurizers import get_atom_featurizer, get_bond_featurizer, get_transformer
 
 
-#@memorize
+@memorize
 def build_graph_and_transform_target(train, validation, atom_alg, bond_alg, transformer_alg, self_loop):
     (X_train, y_train) = train
     (X_val, y_val) = validation
@@ -44,7 +44,7 @@ def build_test_graph_and_transform_target(test, atom_alg, bond_alg, transformer_
 
     y_test = y_test.reshape(-1, 1)
     if transformer is not None:
-        y_test = transformer.transform(y_test)
+        y_test = transformer.fit_transform(y_test)
 
     def featurize(x, y):
         # each item is a duple of type (graph(x), y)
