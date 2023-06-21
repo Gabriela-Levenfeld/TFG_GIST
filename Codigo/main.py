@@ -11,14 +11,14 @@ if __name__ == '__main__':
     SEED = 129767345
     #########################
 
-    isDUMMY = True
+    isDUMMY = False
     if isDUMMY:
         print("Searching dummy configuration")
         X, y = load_mols_df(n=50)
         X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1,
                                                                                                 validation_size=0.2,
                                                                                                 random_state=SEED)
-        n_trials = 1
+        n_trials = 2
         storage = 'sqlite:///basura.db'
     else:
         print("Searching configuration")
@@ -26,7 +26,7 @@ if __name__ == '__main__':
         X_train, X_val, X_test, y_train, y_val, y_test = stratified_train_validation_test_split(X, y, test_size=0.1,
                                                                                                 validation_size=0.2,
                                                                                                 random_state=SEED)
-        n_trials = 10
+        n_trials = 150
         storage = 'sqlite:///GNNPredict.db'
 
     study = optuna.create_study(study_name='GLS_TFG',
@@ -41,5 +41,5 @@ if __name__ == '__main__':
     with open(filename, "wb") as f:
         pickle.dump((X_test, y_test), f)
 
-    # Final Test
-    test_results(best_params, filename)
+    # FIXME: Final Test
+    # test_results(best_params, filename)
