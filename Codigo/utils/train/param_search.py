@@ -55,16 +55,13 @@ def suggest_params_mpnn(trial):
     return params
 
 def suggest_params_gin(trial):
-    num_layers = trial.suggest_int('num_layers', 3, 6)
-    num_nodes = trial.suggest_int('num_node_emb_list', 3, 120)
-    num_edges = trial.suggest_int('num_edge_emb_list', 3, 6)
     params = {
-        'num_node_emb_list': [num_nodes] * num_layers,
-        'num_edge_emb_list': [num_edges] * num_layers,
-        'num_layers': num_layers,
+        'num_node_emb_list': [trial.suggest_int("num_node_emb_list_{}".format(i), 3, 120) for i in range(2)],
+        'num_edge_emb_list': [trial.suggest_int("num_edge_emb_list_{}".format(i), 3, 10) for i in range(2)],
+        'num_layers': trial.suggest_int('num_layers', 3, 6),
         'emb_dim': trial.suggest_int('emb_dim', 64, 512),
         'JK': trial.suggest_categorical('JK', ['concat', 'last', 'max', 'sum']),
-        'dropout':trial.suggest_float('dropout', 0.1, 0.6),
+        'dropout': trial.suggest_float('dropout', 0.1, 0.6),
         'readout': trial.suggest_categorical('readout', ['sum', 'mean', 'max', 'attention', 'set2set'])
     }
     return params
@@ -141,15 +138,15 @@ def bo_validation(reg, val_loader, loss_criterion, transformer):
 def create_objective(train_dataset, validation_dataset):
     def objective(trial):
         params = dict()
-        # TODO: Arreglar GIN model
+        # FIXME: Arreglar GIN model
         #model_name = trial.suggest_categorical('model_name', ['GATv2', 'AttentiveFP', 'MPNN', 'GIN'])
         model_name = trial.suggest_categorical('model_name', ['GATv2', 'AttentiveFP', 'MPNN'])
 
         # Generate the graphs
-        rt_scaler = 'robust'
+        rt_scaler = trial.suggest_categorical('rt_scaler', ['robust'])
         if model_name == 'GIN':
-            atom_featurizer = 'pretrain'
-            bond_featurizer = 'pretrain'
+            atom_featurizer = trial.suggest_categorical('atom_featurizer', ['pretrain'])
+            bond_featurizer = trial.suggest_categorical('bond_featurizer', ['pretrain'])
         else:
             atom_featurizer = trial.suggest_categorical('atom_featurizer', ['canonical', 'attentive_featurizer'])
             bond_featurizer = trial.suggest_categorical('bond_featurizer', ['canonical', 'attentive_featurizer'])
@@ -194,7 +191,6 @@ def create_objective(train_dataset, validation_dataset):
         common_hyperparameters = {
             'batch_size': batch_size,
             'total_epochs': trial.suggest_int('total_epochs', 40, 250),
-            # By now, total_epoch=40 and sometimes it is not enough
             'learning_rate': learning_rate,
             'optimizer': getattr(torch.optim, optimizer_name)(reg._model.parameters(), lr=learning_rate)
         }

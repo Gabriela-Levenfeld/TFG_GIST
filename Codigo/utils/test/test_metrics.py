@@ -53,12 +53,9 @@ def generate_model(best_params, test_loader):
                         node_out_feats=best_params['node_out_feats'],
                         edge_hidden_feats=best_params['edge_hidden_feats'])
     elif best_params['model_name'] == 'GIN':
-        num_layers = best_params['num_layers']
-        num_nodes = best_params['num_node_emb_list']
-        num_edges = best_params['num_edge_emb_list']
-        reg = GINModel(num_node_emb_list=[num_nodes] * num_layers,
-                       num_edge_emb_list=[num_edges] * num_layers,
-                       num_layers=num_layers,
+        reg = GINModel(num_node_emb_list=best_params['num_node_emb_list'],
+                       num_edge_emb_list=best_params['num_edge_emb_list'],
+                       num_layers=best_params['num_layers'],
                        emb_dim=best_params['emb_dim'],
                        JK=best_params['JK'],
                        dropout=best_params['dropout'],
@@ -74,15 +71,13 @@ def generate_model(best_params, test_loader):
 def test_results(best_params, filename):
     X_test, y_test = load_test_set(filename)
 
-    # TODO: Establecer rt_scaler con los best_params no por fuerza bruta
-    rt_scaler = 'robust'
     print('Building graphs...', end='')
     start = time.time()
     test, transformer = build_test_graph_and_transform_target(
         (X_test, y_test),
         atom_alg=best_params['atom_featurizer'],
         bond_alg=best_params['bond_featurizer'],
-        transformer_alg=rt_scaler,
+        transformer_alg=best_params['rt_scaler'],
         self_loop=best_params['self_loop']
     )
     print(f'Done! (Ellapsed: {time.time() - start})')
@@ -92,7 +87,7 @@ def test_results(best_params, filename):
 
     reg = generate_model(best_params, test_loader)
 
-    # Performace predictions on the Test set
+    # Performance predictions on the Test set
     total_epochs = best_params['total_epochs']
     test_losses = []
     maes = []
@@ -125,7 +120,7 @@ def test_results(best_params, filename):
     })
     losses.index = losses.epoch
     model_name = best_params['model_name']
-    losses.to_csv(f'{model_name}_losses.csv', index=False)
+    losses.to_csv(f'losses{model_name}.csv', index=False)
     print('Done - Results saved')
 
     import matplotlib.pyplot as plt
