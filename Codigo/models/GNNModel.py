@@ -42,6 +42,10 @@ class GNNModel(ABC):
     def get_predictions(self, bg):
         return self._model(bg, bg.ndata['h'])
 
+    def cuda(self):
+        self._model = self._model.cuda()
+        return self
+
 
 class GATv2Model(GNNModel):
     def __init__(self, *, in_feats, hidden_feats, num_heads, feat_drops, attn_drops, alphas, residuals, allow_zero_in_degree, share_weights, agg_modes, predictor_out_feats, predictor_dropout, **kwargs):
