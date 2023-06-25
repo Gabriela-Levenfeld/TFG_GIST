@@ -11,7 +11,7 @@ if __name__ == '__main__':
     SEED = 129767345
     #########################
 
-    isDUMMY = False
+    isDUMMY = True
     if isDUMMY:
         print("Searching dummy configuration")
         X, y = load_mols_df(n=50)
@@ -40,6 +40,3 @@ if __name__ == '__main__':
     filename = 'data/test_params/test_set.pkl'
     with open(filename, "wb") as f:
         pickle.dump((X_test, y_test), f)
-
-    # FIXME: Final Test
-    # test_results(best_params, filename)
