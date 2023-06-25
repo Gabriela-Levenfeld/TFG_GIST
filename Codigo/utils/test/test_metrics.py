@@ -174,9 +174,11 @@ def test_results(best_params, filename_train, filename_val,filename_test):
     average_test_mae = np.mean(test_maes)
     average_test_medae = np.mean(test_medaes)
 
+    print('========== TEST Results ==========')
     print(f'Average Test Loss: {average_test_loss: .4f}')
     print(f'Average Test MAE: {average_test_mae: .4f}')
     print(f'Average Test MEDAE: {average_test_medae}: .4f')
+    print('==================================')
 
 
 
