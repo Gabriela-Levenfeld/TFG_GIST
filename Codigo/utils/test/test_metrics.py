@@ -1,6 +1,5 @@
 import os.path
 import pickle
-import sqlite3
 import time
 import numpy as np
 import pandas as pd
@@ -12,27 +11,16 @@ from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
 from utils.graph_utils import build_graph_and_transform_target, build_test_graph_and_transform_target, collate_molgraphs, to_cuda
 
 
-def db_best_params():
-    try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        db_file_path = os.path.join(current_dir, '..', '..', 'param_search_results', 'GNNPredict.db')
-        conn = sqlite3.connect(db_file_path)
-        cursor = conn.cursor()
 
-        cursor.execute(f"SELECT * FROM trial_values ORDER BY value ASC LIMIT 1")
-        best_trial = cursor.fetchone()
-        trial_id = best_trial[0]
-        best_params = cursor.execute(f'SELECT * FROM trial_values WHERE trial_value_id = {trial_id}')
-
-        cursor.close()
-        conn.close()
-        return best_params
-    except Exception as e:
-        print(f'Error occurred: ', str(e))
-        raise e
+def csv_best_params():
+    cwd = os.getcwd()
+    df = pd.read_csv(f'{cwd}/../../param_search_results/trials_dataframe.csv')
+    lowest_value_row = df[df['value'] == df['value'].min()]
+    return lowest_value_row
 
 def load_dataset(filename):
-    with open(filename, "rb") as f:
+    cwd = os.getcwd()
+    with open(f'{cwd}/../../data/datasets/{filename}', "rb") as f:
         X, y = pickle.load(f)
     return X, y
 
@@ -40,16 +28,16 @@ def generate_model(best_params, test_loader):
     # Get a sample of the graph to know the node_feat_size and the edge_feat_size
     graph, y, masks = next(iter(test_loader))
 
-    if best_params['model_name'] == 'GATv2':
-        num_layers = best_params['num_layers']
-        hidden_f = best_params['hidden_feats']
-        n_attention_heads = best_params['num_heads']
-        dropout_input_feats = best_params['feat_drops']
-        dropout_edge = best_params['attn_drops']
-        alpha = best_params['alphas']
-        r = best_params['residuals']
-        s_w = best_params['share_weights']
-        aggregate_modes = best_params['agg_modes']
+    if best_params['model_name'].values[0] == 'GATv2':
+        num_layers = best_params['num_layers'].values[0]
+        hidden_f = best_params['hidden_feats'].values[0]
+        n_attention_heads = best_params['num_heads'].values[0]
+        dropout_input_feats = best_params['feat_drops'].values[0]
+        dropout_edge = best_params['attn_drops'].values[0]
+        alpha = best_params['alphas'].values[0]
+        r = best_params['residuals'].values[0]
+        s_w = best_params['share_weights'].values[0]
+        aggregate_modes = best_params['agg_modes'].values[0]
         reg = GATv2Model(in_feats=graph.ndata['h'].shape[1],
                          hidden_feats=[hidden_f] * num_layers,
                          num_heads=[n_attention_heads] * num_layers,
@@ -57,32 +45,32 @@ def generate_model(best_params, test_loader):
                          attn_drops=[dropout_edge] * num_layers,
                          alphas=[alpha] * num_layers,
                          residuals=[r] * num_layers,
-                         allow_zero_in_degree=best_params['allow_zero_in_degree'],
+                         allow_zero_in_degree=best_params['allow_zero_in_degree'].values[0],
                          share_weights=[s_w] * num_layers,
                          agg_modes=[aggregate_modes] * num_layers,
-                         predictor_out_feats=best_params['predictor_out_feats'],
-                         predictor_dropout=best_params['predictor_dropout'])
-    elif best_params['model_name'] == 'AttentiveFP':
+                         predictor_out_feats=best_params['predictor_out_feats'].values[0],
+                         predictor_dropout=best_params['predictor_dropout'].values[0])
+    elif best_params['model_name'].values[0] == 'AttentiveFP':
         reg = AttentiveFPModel(node_feat_size=graph.ndata['h'].shape[1],
                                edge_feat_size=graph.edata['e'].shape[1],
-                               num_layers=best_params['num_layers'],
-                               graph_feat_size=best_params['graph_feat_size'],
-                               dropout=best_params['dropout'])
-    elif best_params['model_name'] == 'MPNN':
+                               num_layers=best_params['num_layers'].values[0],
+                               graph_feat_size=best_params['graph_feat_size'].values[0],
+                               dropout=best_params['dropout'].values[0])
+    elif best_params['model_name'].values[0] == 'MPNN':
         reg = MPNNModel(node_in_feats=graph.ndata['h'].shape[1],
                         edge_in_feats=graph.edata['e'].shape[1],
-                        node_out_feats=best_params['node_out_feats'],
-                        edge_hidden_feats=best_params['edge_hidden_feats'])
-    elif best_params['model_name'] == 'GIN':
-        reg = GINModel(num_node_emb_list=best_params['num_node_emb_list'],
-                       num_edge_emb_list=best_params['num_edge_emb_list'],
-                       num_layers=best_params['num_layers'],
-                       emb_dim=best_params['emb_dim'],
-                       JK=best_params['JK'],
-                       dropout=best_params['dropout'],
-                       readout=best_params['readout'])
+                        node_out_feats=best_params['node_out_feats'].values[0],
+                        edge_hidden_feats=best_params['edge_hidden_feats'].values[0])
+    elif best_params['model_name'].values[0] == 'GIN':
+        reg = GINModel(num_node_emb_list=best_params['num_node_emb_list'].values[0],
+                       num_edge_emb_list=best_params['num_edge_emb_list'].values[0],
+                       num_layers=best_params['num_layers'].values[0],
+                       emb_dim=best_params['emb_dim'].values[0],
+                       JK=best_params['JK'].values[0],
+                       dropout=best_params['dropout'].values[0],
+                       readout=best_params['readout'].values[0])
     else:
-        raise ValueError(f"Invalid model name {best_params['model_name']}")
+        raise ValueError(f"Invalid model name {best_params['model_name'].values[0]}")
 
     if torch.cuda.is_available():
         print('using CUDA!')
@@ -100,35 +88,35 @@ def test_results(best_params, filename_train, filename_val, filename_test):
     train, validation, transformer = build_graph_and_transform_target(
         (X_train, y_train),
         (X_val, y_val),
-        atom_alg=best_params['atom_featurizer'],
-        bond_alg=best_params['bond_featurizer'],
-        transformer_alg=best_params['rt_scaler'],
-        self_loop=best_params['self_loop']
+        atom_alg=best_params['atom_featurizer'].values[0],
+        bond_alg=best_params['bond_featurizer'].values[0],
+        transformer_alg=best_params['rt_scaler'].values[0],
+        self_loop=best_params['self_loop'].values[0]
     )
     test, transformer = build_test_graph_and_transform_target(
         (X_test, y_test),
-        atom_alg=best_params['atom_featurizer'],
-        bond_alg=best_params['bond_featurizer'],
-        transformer_alg=best_params['rt_scaler'],
-        self_loop=best_params['self_loop']
+        atom_alg=best_params['atom_featurizer'].values[0],
+        bond_alg=best_params['bond_featurizer'].values[0],
+        transformer_alg=best_params['rt_scaler'].values[0],
+        self_loop=best_params['self_loop'].values[0]
     )
     print(f'Done! (Ellapsed: {time.time() - start})')
 
     # Evaluate the model on TEST set
-    train_loader = DataLoader(train, batch_size=best_params['batch_size'], shuffle=True, collate_fn=collate_molgraphs)
-    val_loader = DataLoader(validation, batch_size=best_params['batch_size'], shuffle=False, collate_fn=collate_molgraphs)
-    test_loader = DataLoader(test, batch_size=best_params['batch_size'], shuffle=False, collate_fn=collate_molgraphs)
+    train_loader = DataLoader(train, batch_size=best_params['params_batch_size'].values[0], shuffle=True, collate_fn=collate_molgraphs)
+    val_loader = DataLoader(validation, batch_size=best_params['params_batch_size'].values[0], shuffle=False, collate_fn=collate_molgraphs)
+    test_loader = DataLoader(test, batch_size=best_params['params_batch_size'].values[0], shuffle=False, collate_fn=collate_molgraphs)
 
     reg = generate_model(best_params, test_loader)
 
-    optimizer = best_params['optimizer']
+    optimizer = best_params['optimizer'].values[0]
 
     train_losses = []
     val_losses = []
     maes = []
     medaes = []
     loss_criterion = F.smooth_l1_loss
-    total_epochs = best_params['total_epochs']
+    total_epochs = best_params['total_epochs'].values[0]
 
     for epoch in range(1, total_epochs + 1):
         reg.train()
@@ -150,12 +138,8 @@ def test_results(best_params, filename_train, filename_val, filename_test):
                 abs_errors.append(absolute_errors)
 
         val_losses.append(np.mean(epoch_losses))
-        maes.append(
-            np.mean(np.concatenate(abs_errors))
-        )
-        medaes.append(
-            np.median(np.concatenate(abs_errors))
-        )
+        maes.append(np.mean(np.concatenate(abs_errors)))
+        medaes.append(np.median(np.concatenate(abs_errors)))
 
         if epoch % 1 == 0:
             print(f'Epoch:{epoch}, Train loss: {train_losses[-1]}, Test loss: {val_losses[-1]}, Test MEDAE: {medaes[-1]}, Test MAE: {maes[-1]}' )
@@ -169,7 +153,7 @@ def test_results(best_params, filename_train, filename_val, filename_test):
         'mae': maes
     })
     losses.index = losses.epoch
-    model_name = best_params['model_name']
+    model_name = best_params['model_name'].values[0]
     losses.to_csv(f'losses{model_name}.csv', index=False)
     print('Done')
 
@@ -201,11 +185,10 @@ def test_results(best_params, filename_train, filename_val, filename_test):
 
 
 if __name__ == '__main__':
-    filename_train = 'data/datasets/train.pkl'
-    filename_val = 'data/datasets/val.pkl'
-    filename_test = 'data/dataset/test_set.pkl'
+    filename_train = 'train.pkl'
+    filename_val = 'val.pkl'
+    filename_test = 'test_set.pkl'
 
-    best_params = db_best_params()
-    print(best_params)
+    best_params = csv_best_params()
 
     test_results(best_params, filename_train, filename_val, filename_test)
