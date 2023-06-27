@@ -1,3 +1,4 @@
+import os.path
 import pickle
 import sqlite3
 import time
@@ -9,8 +10,26 @@ from torch.utils.data import DataLoader
 
 from models.GNNModel import GATv2Model, AttentiveFPModel, MPNNModel, GINModel
 from utils.graph_utils import build_graph_and_transform_target, build_test_graph_and_transform_target, collate_molgraphs, to_cuda
-from utils.train.param_search import load_best_params
 
+
+def db_best_params():
+    try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        db_file_path = os.path.join(current_dir, '..', '..', 'param_search_results', 'GNNPredict.db')
+        conn = sqlite3.connect(db_file_path)
+        cursor = conn.cursor()
+
+        cursor.execute(f"SELECT * FROM trial_values ORDER BY value ASC LIMIT 1")
+        best_trial = cursor.fetchone()
+        trial_id = best_trial[0]
+        best_params = cursor.execute(f'SELECT * FROM trial_values WHERE trial_value_id = {trial_id}')
+
+        cursor.close()
+        conn.close()
+        return best_params
+    except Exception as e:
+        print(f'Error occurred: ', str(e))
+        raise e
 
 def load_dataset(filename):
     with open(filename, "rb") as f:
@@ -70,7 +89,7 @@ def generate_model(best_params, test_loader):
         reg = reg.cuda()
     return reg
 
-def test_results(best_params, filename_train, filename_val,filename_test):
+def test_results(best_params, filename_train, filename_val, filename_test):
 
     X_train, y_train = load_dataset(filename_train)
     X_val, y_val = load_dataset(filename_val)
@@ -181,19 +200,12 @@ def test_results(best_params, filename_train, filename_val,filename_test):
     print('==================================')
 
 
-
 if __name__ == '__main__':
-    # TODO: Meter las rutas correctas
-    filename_train = ''
-    filename_val = ''
-    filename_test = 'data/test_params/test_set.pkl'
+    filename_train = 'data/datasets/train.pkl'
+    filename_val = 'data/datasets/val.pkl'
+    filename_test = 'data/dataset/test_set.pkl'
 
-    conn = sqlite3.connect('GNNPredict.db')
-    cursor = conn.cursor()
-    best_trial = load_best_params('GLS_TFG')
-    best_params = pickle.load(best_trial.user_attrs['best_params'])
+    best_params = db_best_params()
+    print(best_params)
 
     test_results(best_params, filename_train, filename_val, filename_test)
-
-    cursor.close()
-    conn.close()
