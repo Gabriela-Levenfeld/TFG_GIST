@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import dgl.backend as F
 from rdkit import Chem
-from collections import defaultdict
 from sklearn.preprocessing import FunctionTransformer, RobustScaler
 
 

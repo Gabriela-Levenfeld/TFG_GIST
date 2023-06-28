@@ -4,7 +4,6 @@ import optuna
 from utils.data import load_alvadesc_data, load_mols_df
 from utils.train.model_selection import stratified_train_validation_test_split
 from utils.train.param_search import param_search
-from utils.test.test_metrics import test_results
 
 
 if __name__ == '__main__':

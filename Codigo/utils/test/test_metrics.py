@@ -1,4 +1,3 @@
-import os.path
 import pickle
 import time
 import numpy as np
@@ -29,9 +28,9 @@ def generate_model(best_params, test_loader):
     graph, y, masks = next(iter(test_loader))
 
     if best_params['params_model_name'].values[0] == 'GATv2':
-        num_layers = best_params['params_num_layers'].values[0]
-        hidden_f = best_params['params_hidden_feats'].values[0]
-        n_attention_heads = best_params['params_num_heads'].values[0]
+        num_layers = int(best_params['params_num_layers'].values[0])
+        hidden_f = int(best_params['params_hidden_feats'].values[0])
+        n_attention_heads = int(best_params['params_num_heads'].values[0])
         dropout_input_feats = best_params['params_feat_drops'].values[0]
         dropout_edge = best_params['params_attn_drops'].values[0]
         alpha = best_params['params_alphas'].values[0]
@@ -48,13 +47,13 @@ def generate_model(best_params, test_loader):
                          allow_zero_in_degree=best_params['params_allow_zero_in_degree'].values[0],
                          share_weights=[s_w] * num_layers,
                          agg_modes=[aggregate_modes] * num_layers,
-                         predictor_out_feats=best_params['params_predictor_out_feats'].values[0],
+                         predictor_out_feats=int(best_params['params_predictor_out_feats'].values[0]),
                          predictor_dropout=best_params['params_predictor_dropout'].values[0])
     elif best_params['params_model_name'].values[0] == 'AttentiveFP':
         reg = AttentiveFPModel(node_feat_size=graph.ndata['h'].shape[1],
                                edge_feat_size=graph.edata['e'].shape[1],
-                               num_layers=best_params['params_num_layers'].values[0],
-                               graph_feat_size=best_params['params_graph_feat_size'].values[0],
+                               num_layers=int(best_params['params_num_layers'].values[0]),
+                               graph_feat_size=int(best_params['params_graph_feat_size'].values[0]),
                                dropout=best_params['params_dropout'].values[0])
     elif best_params['params_model_name'].values[0] == 'MPNN':
         reg = MPNNModel(node_in_feats=graph.ndata['h'].shape[1],
@@ -64,8 +63,8 @@ def generate_model(best_params, test_loader):
     elif best_params['params_model_name'].values[0] == 'GIN':
         reg = GINModel(num_node_emb_list=best_params['params_num_node_emb_list'].values[0],
                        num_edge_emb_list=best_params['params_num_edge_emb_list'].values[0],
-                       num_layers=best_params['params_num_layers'].values[0],
-                       emb_dim=best_params['params_emb_dim'].values[0],
+                       num_layers=int(best_params['params_num_layers'].values[0]),
+                       emb_dim=int(best_params['params_emb_dim'].values[0]),
                        JK=best_params['params_JK'].values[0],
                        dropout=best_params['params_dropout'].values[0],
                        readout=best_params['params_readout'].values[0])
@@ -110,7 +109,6 @@ def test_results(best_params):
 
     reg = generate_model(best_params, test_loader)
 
-    #optimizer = best_params['params_optimizer'].values[0]
     optimizer_name = best_params['params_optimizer'].values[0]
     learning_rate = best_params['params_learning_rate'].values[0]
     optimizer = getattr(torch.optim, optimizer_name)(reg._model.parameters(), lr=learning_rate)
@@ -184,15 +182,10 @@ def test_results(best_params):
     print('========== TEST Results ==========')
     print(f'Average Test Loss: {average_test_loss: .4f}')
     print(f'Average Test MAE: {average_test_mae: .4f}')
-    print(f'Average Test MEDAE: {average_test_medae}: .4f')
+    print(f'Average Test MEDAE: {average_test_medae: .4f}')
     print('==================================')
 
 
 if __name__ == '__main__':
-    filename_train = 'train.pkl'
-    filename_val = 'val.pkl'
-    filename_test = 'test_set.pkl'
-
     best_params = csv_best_params()
-
     test_results(best_params)

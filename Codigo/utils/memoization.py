@@ -12,7 +12,6 @@ def memorize(fun):
     """ Memoization decorator, intended to cache the results for the graph building function to disk. np.arrays
     or pandas dataframes are hex-hashed. The other arguments are expected to be convertable to strings
     """
-    #CACHE_PATH = '.cache' Not working
     CACHE_PATH = os.path.expanduser("~/.tfg_gnns_cache")
     if not os.path.exists(CACHE_PATH):
         os.makedirs(CACHE_PATH)
