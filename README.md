@@ -8,13 +8,14 @@ Autor: Gabriela H. Levenfeld Sabau
 
 Director: Abraham Otero Quintana y Constantino Antonio García Martínez          
 <br><br>
-Este proyecto consta de dos carpetas:
+### Estructura del proyecto
+El proyecto consta de dos carpetas principales:
 
-  1. **Codigo**: Contiene el código del proyecto escrito en el lenguaje de programación Python.
+  - **src**: Contiene el código del proyecto escrito en Python. En este directorio se encuentran los scripts y módulos desarrollados para la implementación de las GNNs y predicción del tiempo de retención.
 
-  2. **DatosObtenidos**: Contiene los datos almacenados de los distintos modelos que se han ido probando durante el desarrollo de este proyecto (.csv y gráfico).
-<br>
-Hay dos archivos que no se incluyen en este repositorio debido a su tamaño. Para poder utilizarlos hay que ubicarlos en la ruta correspondiente dentro del proyecto. Estos son:
+  - **results**: Contiene los datos obtenidos en el proyecto, incluyendo los resultados obtenidos de las combinaciones probadas y el rendimiento final del mejor modelo seleccionado.
+### Archivos no incluidos en el repositorio
+Existen dos archivos que no se encuentran incluidos debido a su tamaño. Estos ficheros son necesarios para el funcionamiento del proyecto y deben ser ubicados en su ruta correspondiente antes de ejecutar el código. Los archivos son los siguientes:
 
 - data/alvadesc/fingerprints/fingerprints.pkl
 - data/mols_df.pkl
