@@ -6,7 +6,7 @@ Grado en Ingeniería de Sistemas de Telecomunicación
 <br><br>
 Autor: Gabriela H. Levenfeld Sabau
 
-Director: Abraham Otero Quintana y Constantino Antonio García Martínez          
+Directores: Abraham Otero Quintana y Constantino Antonio García Martínez          
 <br><br>
 ### Estructura del proyecto
 El proyecto consta de dos carpetas principales:
